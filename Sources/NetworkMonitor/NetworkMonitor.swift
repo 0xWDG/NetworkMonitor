@@ -11,58 +11,87 @@
 
 #if canImport(Combine) && canImport(Network)
 import Combine
+import Dispatch
 import Network
 
-/// NetworkMonitor wraps NWPathMonitor into an Obervable object.
+/// Observes changes to the network path and publishes a current snapshot.
+@MainActor
 public final class NetworkMonitor: ObservableObject {
-    /// This will be used to track the network connectivity
-    @Published
-    public var isConnected = true
+    /// An immutable representation of the latest network path.
+    public struct Snapshot {
+        /// Whether the latest path can satisfy network connections.
+        public let isConnected: Bool
 
-    /// This will be used to track if the network is expensive (e.g. cellular data)
-    @Published
-    public var isExpensive = false
+        /// Whether the latest path is considered expensive.
+        public let isExpensive: Bool
 
-    /// Types of network interfaces, based on their link layer media types.
-    @Published
-    var networkType: NWInterface.InterfaceType? = .other
+        /// The preferred interface type used by the latest path.
+        public let networkType: NWInterface.InterfaceType?
 
-    // This will be used to track the network path (e.g. Wi-Fi, cellular data, etc.)
-    /// An object that contains information about the properties of the network that a connection uses,
-    /// or that are available to your app.
-    @Published
-    public var nwPath: NWPath?
+        /// The latest path reported by `NWPathMonitor`.
+        public let path: NWPath?
 
-    // Create an instance of NWPathMonitor
-    let monitor = NWPathMonitor()
-
-    /// NetworkMonitor wraps NWPathMonitor into an Obervable object.
-    public init() {
-        // Set the pathUpdateHandler
-        monitor.pathUpdateHandler = { [weak self] path in
-
-            // Check if the device is connected to the internet
-            self?.isConnected = path.status == .satisfied
-
-            // Check if the network is expensive (e.g. cellular data)
-            self?.isExpensive = path.isExpensive
-
-            // Check which interface we are currently using
-            self?.networkType = path.availableInterfaces.first?.type
-
-            // Update the network path
-            self?.nwPath = path
+        init(path: NWPath? = nil) {
+            self.path = path
+            self.isConnected = path?.status == .satisfied
+            self.isExpensive = path?.isExpensive ?? false
+            self.networkType = Self.preferredInterfaceType(for: path)
         }
 
-        // Create a queue for the monitor
-        let queue = DispatchQueue(label: "Monitor")
+        private static func preferredInterfaceType(for path: NWPath?) -> NWInterface.InterfaceType? {
+            let preferredTypes: [NWInterface.InterfaceType] = [
+                .wifi,
+                .wiredEthernet,
+                .cellular,
+                .loopback,
+                .other
+            ]
 
-        // Start monitoring
+            return preferredTypes.first { path?.usesInterfaceType($0) == true }
+        }
+    }
+
+    /// The latest network state. A path update causes one publication.
+    @Published
+    public private(set) var snapshot = Snapshot()
+
+    /// Whether the latest path can satisfy network connections.
+    public var isConnected: Bool { snapshot.isConnected }
+
+    /// Whether the latest path is considered expensive.
+    public var isExpensive: Bool { snapshot.isExpensive }
+
+    /// The preferred interface type used by the latest path.
+    public var networkType: NWInterface.InterfaceType? { snapshot.networkType }
+
+    /// The latest path reported by `NWPathMonitor`.
+    public var nwPath: NWPath? { snapshot.path }
+
+    private let monitor: NWPathMonitor
+    private let monitorQueue: DispatchQueue
+
+    /// Creates and starts a network path monitor.
+    public convenience init() {
+        self.init(monitor: NWPathMonitor())
+    }
+
+    init(
+        monitor: NWPathMonitor,
+        queue: DispatchQueue = DispatchQueue(label: "NetworkMonitor.path-updates")
+    ) {
+        self.monitor = monitor
+        self.monitorQueue = queue
+
+        monitor.pathUpdateHandler = { [weak self] path in
+            Task { @MainActor [weak self] in
+                self?.snapshot = Snapshot(path: path)
+            }
+        }
         monitor.start(queue: queue)
     }
 
     deinit {
-        // Stop monitoring
+        monitor.pathUpdateHandler = nil
         monitor.cancel()
     }
 }

@@ -1,6 +1,6 @@
 # NetworkMonitor
 
-NetworkMonitor wraps NWPathMonitor into an Obervable object.
+NetworkMonitor wraps `NWPathMonitor` into an observable object.
 
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2F0xWDG%2FNetworkMonitor%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/0xWDG/NetworkMonitor)
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2F0xWDG%2FNetworkMonitor%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/0xWDG/NetworkMonitor)
@@ -9,10 +9,10 @@ NetworkMonitor wraps NWPathMonitor into an Obervable object.
 
 ## Requirements
 
-- Swift 5.9+ (Xcode 15+)
-- iOS 12.0+, iPadOS 12.0+, macOS 10.15+, tvOS 12.0+, visionOS 1.0+, watchOS 6.0+,
+- Swift 5.8+
+- iOS 13.0+, iPadOS 13.0+, macOS 11.0+, tvOS 13.0+, visionOS 1.0+, watchOS 7.0+
 
-## Installation (Pakage.swift)
+## Installation (Package.swift)
 
 ```swift
 dependencies: [
@@ -38,7 +38,7 @@ import SwiftUI
 import NetworkMonitor
 
 struct ContentView: View {
-    @ObservedObject
+    @StateObject
     private var network = NetworkMonitor()
 
     var body: some View {
@@ -51,9 +51,9 @@ struct ContentView: View {
                 Text("You are using \"")
                 switch (network.networkType) {
                 case .cellular:
-                    Text("Celluar")
+                    Text("Cellular")
                 case .wifi:
-                    Text("Wifi")
+                    Text("Wi-Fi")
                 case .loopback:
                     Text("Loopback")
                 case .other:
@@ -65,8 +65,6 @@ struct ContentView: View {
                 }
                 Text("\" to connect to the internet")
             }
-        }.task {
-            print(network.nwPath)
         }
     }
 }

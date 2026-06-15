@@ -13,7 +13,14 @@
 import Testing
 @testable import NetworkMonitor
 
-@Test func example() async throws {
-    // Write your test here and use APIs like `#expect(...)` to check expected conditions.
+@Test
+@MainActor
+func initialSnapshotDoesNotAssumeConnectivity() {
+    let snapshot = NetworkMonitor.Snapshot()
+
+    #expect(snapshot.isConnected == false)
+    #expect(snapshot.isExpensive == false)
+    #expect(snapshot.networkType == nil)
+    #expect(snapshot.path == nil)
 }
 #endif
