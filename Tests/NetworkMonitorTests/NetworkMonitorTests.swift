@@ -13,6 +13,7 @@
 @testable import NetworkMonitor
 import Testing
 
+#if canImport(Combine) && canImport(Network)
 @Test
 @MainActor
 func initialSnapshotDoesNotAssumeConnectivity() {
@@ -23,10 +24,13 @@ func initialSnapshotDoesNotAssumeConnectivity() {
     #expect(snapshot.networkType == nil)
     #expect(snapshot.path == nil)
 }
+#endif
 
+#if canImport(Foundation) && canImport(os)
 @Test
 func networkTrafficInterceptionCanBeEnabled() {
     #expect(NetworkMonitor.interceptNetworkTraffic(options: [.host, .path]))
     #expect(NetworkMonitor.LogOptions.all.contains(.httpBody))
 }
+#endif
 #endif
