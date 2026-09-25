@@ -10,17 +10,23 @@
 //
 
 #if canImport(Testing)
-import Testing
 @testable import NetworkMonitor
+import Testing
 
 @Test
 @MainActor
 func initialSnapshotDoesNotAssumeConnectivity() {
-    let snapshot = NetworkMonitor.Snapshot()
+    let snapshot = NetworkMonitorObserver.Snapshot()
 
     #expect(snapshot.isConnected == false)
     #expect(snapshot.isExpensive == false)
     #expect(snapshot.networkType == nil)
     #expect(snapshot.path == nil)
+}
+
+@Test
+func networkTrafficInterceptionCanBeEnabled() {
+    #expect(NetworkMonitor.interceptNetworkTraffic(options: [.host, .path]))
+    #expect(NetworkMonitor.LogOptions.all.contains(.httpBody))
 }
 #endif

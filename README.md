@@ -1,6 +1,6 @@
 # NetworkMonitor
 
-NetworkMonitor wraps `NWPathMonitor` into an observable object.
+NetworkMonitor intercepts HTTP and HTTPS traffic made through Foundation's URL loading system and writes concise events to unified logging.
 
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2F0xWDG%2FNetworkMonitor%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/0xWDG/NetworkMonitor)
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2F0xWDG%2FNetworkMonitor%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/0xWDG/NetworkMonitor)
@@ -33,13 +33,46 @@ targets: [
 
 ## Usage
 
+Enable traffic logging once during app startup, before you create URL sessions. By default, entries are sent to the `nl.wesleydegroot.NetworkMonitor` OSLog subsystem.
+
+```swift
+import NetworkMonitor
+
+NetworkMonitor.interceptNetworkTraffic()
+```
+
+To use your own log, pass an `OSLog` instance:
+
+```swift
+import OSLog
+import NetworkMonitor
+
+let networkLog = OSLog(subsystem: "com.example.MyApp", category: "Network")
+NetworkMonitor.interceptNetworkTraffic(log: networkLog)
+```
+
+By default, the monitor logs each request's method and URL, then its status code and duration (or a failure). Select exactly the additional fields you need:
+
+```swift
+NetworkMonitor.interceptNetworkTraffic(
+    log: networkLog,
+    options: [.host, .path, .headers, .cookies]
+)
+```
+
+Available options are `.request`, `.response`, `.host`, `.path`, `.httpBody`, `.headers`, `.cookies`, and `.all`. HTTP bodies are logged as UTF-8 text when possible, otherwise Base64. Headers, cookies, complete URLs, and HTTP bodies can contain credentials or personal data; only enable them in a suitable debugging environment. `URLProtocol` interception applies to HTTP(S) requests that use Foundation's URL loading system; it does not observe traffic from networking stacks that bypass it.
+
+## Legacy network-path observer
+
+`NetworkMonitorObserver` is retained for observing network reachability and interface state. It is separate from traffic interception.
+
 ```swift
 import SwiftUI
 import NetworkMonitor
 
 struct ContentView: View {
     @StateObject
-    private var network = NetworkMonitor()
+    private var network = NetworkMonitorObserver()
 
     var body: some View {
         VStack {
